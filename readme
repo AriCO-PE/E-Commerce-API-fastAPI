@@ -1,0 +1,24 @@
+##Working in http://127.0.0.1:8000/docs
+
+Day one: We create the venv for make the api work with
+all the requeriments libraries.
+
+endpoint then we need: 
+
+Autentification:
+POST /auth/register 
+POST /auth/login 
+
+products:
+GET /products 
+GET /products/{id} 
+POST /products 
+
+cart:
+GET /cart 
+POST /cart/add 
+DELETE /cart/remove/{item_id}
+
+Órders and payments:
+POST /orders/checkout 
+POST /orders/webhook-stripe 
