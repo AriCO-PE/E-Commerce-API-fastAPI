@@ -18,7 +18,7 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str
 
-    # Schema for product creation input (Day 10 preview)
+
 class ProductCreate(BaseModel):
     name: str
     description: str | None = None
@@ -26,7 +26,7 @@ class ProductCreate(BaseModel):
     stock: int = 0
     image_url: str | None = None
 
-# Schema for product API responses
+
 class ProductResponse(BaseModel):
     id: int
     name: str
@@ -34,6 +34,21 @@ class ProductResponse(BaseModel):
     price: float
     stock: int
     image_url: str | None
+
+    class Config:
+        from_attributes = True
+
+      
+class CartItemCreate(BaseModel):
+    product_id: int
+    quantity: int = 1
+
+
+class CartItemResponse(BaseModel):
+    id: int
+    product_id: int
+    quantity: int
+    product: ProductResponse 
 
     class Config:
         from_attributes = True

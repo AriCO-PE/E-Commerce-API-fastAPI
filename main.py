@@ -129,3 +129,57 @@ def create_product(
     db.refresh(new_product)
     
     return new_product
+
+
+
+
+@app.post("/cart/add", response_model=schemas.CartItemResponse, status_code=status.HTTP_201_CREATED)
+def add_to_cart(
+    item_data: schemas.CartItemCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user) 
+):
+    
+    product = db.query(Product).filter(Product.id == item_data.product_id).first()
+    if not product:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Product with ID {item_data.product_id} does not exist."
+        )
+    
+    
+    if product.stock < item_data.quantity:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Insufficient stock. Only {product.stock} items available."
+        )
+
+  
+    existing_item = db.query(CartItem).filter(
+        CartItem.user_id == current_user.id,
+        CartItem.product_id == item_data.product_id
+    ).first()
+
+    if existing_item:
+       
+        new_quantity = existing_item.quantity + item_data.quantity
+        if product.stock < new_quantity:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Cannot add more. Combined quantity exceeds available stock."
+            )
+        existing_item.quantity = new_quantity
+        db.commit()
+        db.refresh(existing_item)
+        return existing_item
+    else:
+        
+        new_cart_item = CartItem(
+            user_id=current_user.id,
+            product_id=item_data.product_id,
+            quantity=item_data.quantity
+        )
+        db.add(new_cart_item)
+        db.commit()
+        db.refresh(new_cart_item)
+        return new_cart_item
