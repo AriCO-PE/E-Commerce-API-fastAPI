@@ -5,6 +5,7 @@ from database import engine, get_db
 from models import Base, User, Product, CartItem
 import schemas
 import auth
+import stripe
 
 
 from dependencies import get_current_user, check_admin_role
@@ -216,3 +217,55 @@ def clear_user_cart(
         "status": "Success",
         "message": "Your shopping cart has been successfully emptied."
     }
+
+
+stripe.api_key = "sk_test_51TeKaa2NS1DfnPIApnyQR2yXYOdVwRtBJGrkrzbR9Iw493mkrYQZeQNTpja0xXgPbj7mHGSPgXlUogsPzCaCNfm700ciLJXdvD"
+
+
+
+@app.post("/checkout", status_code=status.HTTP_200_OK)
+def checkout_and_pay(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    cart_items = db.query(CartItem).filter(CartItem.user_id == current_user.id).all()
+    
+    if not cart_items:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Your shopping cart is empty. Cannot proceed to checkout."
+        )
+        
+    
+    total_price = sum(item.quantity * item.product.price for item in cart_items)
+    
+  
+    amount_in_cents = int(total_price * 100)
+    
+    try:
+        payment_intent = stripe.PaymentIntent.create(
+            amount=amount_in_cents,
+            currency="usd",
+            metadata={
+                "user_id": str(current_user.id),
+                "email": current_user.email
+            }
+        )
+        
+     
+        db.query(CartItem).filter(CartItem.user_id == current_user.id).delete(synchronize_session=False)
+        db.commit()
+        
+      
+        return {
+            "status": "Success",
+            "message": "Payment intent created successfully. Cart has been cleared.",
+            "total_amount_usd": round(total_price, 2),
+            "client_secret": payment_intent.client_secret
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Stripe Gateway Error: {str(e)}"
+        )
