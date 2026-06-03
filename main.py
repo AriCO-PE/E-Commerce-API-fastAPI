@@ -1,34 +1,61 @@
-from fastapi import FastAPI, Depends
+from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
-# CAMBIO AQUÍ: Importamos las clases específicas para que Python las lea sí o sí
 from database import engine, get_db
 from models import Base, User, Product, CartItem
+import schemas
+import auth
 
-# Ahora Base sí sabe que existen User, Product y CartItem, y creará las 3 tablas
+
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="E-Commerce API con IA")
+app = FastAPI(title="AI-Powered E-Commerce API")
 
 @app.get("/")
 def read_root():
     return {
-        "status": "API Funcionando",
-        "proyecto": "E-Commerce Backend"
+        "status": "API Operational",
+        "project": "E-Commerce Backend"
     }
 
 @app.get("/test-db")
 def test_database(db: Session = Depends(get_db)):
     try:
-        # Intentamos contar los usuarios usando la clase User directamente
-        num_usuarios = db.query(User).count()
+        total_users = db.query(User).count()
         return {
-            "status": "Conexión exitosa",
-            "mensaje": "La base de datos responde correctamente y las tablas existen",
-            "usuarios_registrados": num_usuarios
+            "status": "Success",
+            "message": "Database connection verified and active",
+            "registered_users": total_users
         }
     except Exception as e:
         return {
-            "status": "Error",
-            "mensaje": f"No se pudo conectar a la base de datos: {str(e)}"
+            "status": "Failure",
+            "message": f"Database connectivity error: {str(e)}"
         }
+
+
+@app.post("/auth/register", response_model=schemas.UserResponse, status_code=status.HTTP_201_CREATED)
+def register_user(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
+
+    db_user = db.query(User).filter(User.email == user_data.email).first()
+    if db_user:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="This email address is already registered."
+        )
+    
+
+    hashed_pwd = auth.get_password_hash(user_data.password)
+    
+
+    new_user = User(
+        email=user_data.email,
+        hashed_password=hashed_pwd
+    )
+    
+
+    db.add(new_user)
+    db.commit()
+    db.refresh(new_user)
+    
+    return new_user
