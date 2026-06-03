@@ -59,3 +59,31 @@ def register_user(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
     db.refresh(new_user)
     
     return new_user
+
+
+@app.post("/auth/login", response_model=schemas.TokenResponse)
+def login_user(user_data: schemas.UserCreate, db: Session = Depends(get_db)):
+    
+    user = db.query(User).filter(User.email == user_data.email).first()
+  
+    if not user or not auth.verify_password(user_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid email or password.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+   
+    token_payload = {
+        "sub": str(user.id),
+        "email": user.email,
+        "role": user.role
+    }
+    
+    
+    access_token = auth.create_access_token(data=token_payload)
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer"
+    }
