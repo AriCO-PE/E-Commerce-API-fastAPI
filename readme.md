@@ -3,6 +3,7 @@
 ¡Bienvenido al backend core de una plataforma de comercio electrónico moderna, segura y potenciada por Inteligencia Artificial! Esta API fue construida desde cero utilizando **FastAPI** y sigue una arquitectura limpia, modular y escalable para el manejo de usuarios, catálogos, finanzas internacionales y lógica predictiva.
 
 ---
+##https://roadmap.sh/projects/ecommerce-api
 
 ## 🚀 Características Principales (Features)
 
