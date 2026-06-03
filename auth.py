@@ -1,12 +1,18 @@
+import os
 from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException, status
+from dotenv import load_dotenv
 import bcrypt
 import jwt
 
-# Configuration for JWT
-SECRET_KEY = "SUPER_SECRET_DYNAMIC_KEY_CHANGE_THIS_LATER"
+
+load_dotenv()
+
+SECRET_KEY = os.getenv("SECRET_KEY", "fallback_temporary_key_for_local_safety")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
+
+
 
 def get_password_hash(password: str) -> str:
     password_bytes = password.encode('utf-8')
@@ -26,7 +32,7 @@ def create_access_token(data: dict) -> str:
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
-# NEW: Decode and verify JWT token validity
+
 def decode_access_token(token: str) -> dict:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
