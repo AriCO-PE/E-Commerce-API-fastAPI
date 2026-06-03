@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-
+from typing import List
 from database import engine, get_db
 from models import Base, User, Product, CartItem
 import schemas
@@ -19,6 +19,7 @@ def read_root():
         "status": "API Operational",
         "project": "E-Commerce Backend"
     }
+
 
 @app.get("/test-db")
 def test_database(db: Session = Depends(get_db)):
@@ -86,3 +87,45 @@ def get_admin_dashboard(admin_user: User = Depends(check_admin_role)):
         "status": "Success",
         "message": f"Welcome back Admin {admin_user.email}! Access to secret operations granted."
     }
+
+
+
+@app.get("/products", response_model=List[schemas.ProductResponse])
+def get_all_products(db: Session = Depends(get_db)):
+    products = db.query(Product).all()
+    return products
+
+
+@app.get("/products/{id}", response_model=schemas.ProductResponse)
+def get_product_by_id(id: int, db: Session = Depends(get_db)):
+    product = db.query(Product).filter(Product.id == id).first()
+    
+    if not product:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Product with ID {id} was not found in our catalog."
+        )
+    return product
+
+
+@app.post("/products", response_model=schemas.ProductResponse, status_code=status.HTTP_201_CREATED)
+def create_product(
+    product_data: schemas.ProductCreate, 
+    db: Session = Depends(get_db),
+    current_admin: User = Depends(check_admin_role) 
+):
+ 
+    new_product = Product(
+        name=product_data.name,
+        description=product_data.description,
+        price=product_data.price,
+        stock=product_data.stock,
+        image_url=product_data.image_url
+    )
+    
+    
+    db.add(new_product)
+    db.commit()
+    db.refresh(new_product)
+    
+    return new_product
