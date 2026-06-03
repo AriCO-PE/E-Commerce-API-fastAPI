@@ -1,3 +1,4 @@
+from typing import List  
 from pydantic import BaseModel, EmailStr
 
 
@@ -52,8 +53,6 @@ class CartItemResponse(BaseModel):
 
     class Config:
         from_attributes = True
-
-        from typing import List
 
 
 class CartOverviewResponse(BaseModel):
