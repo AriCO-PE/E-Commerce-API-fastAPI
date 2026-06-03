@@ -10,6 +10,15 @@ import stripe
 
 from dependencies import get_current_user, check_admin_role
 
+
+# Load environment variables from the .env file
+load_dotenv()
+
+# Securely fetch keys from the environment
+stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
+ai_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+
+
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="AI-Powered E-Commerce API")
@@ -217,11 +226,6 @@ def clear_user_cart(
         "status": "Success",
         "message": "Your shopping cart has been successfully emptied."
     }
-
-
-stripe.api_key = "sk_test_51TeKaa2NS1DfnPIApnyQR2yXYOdVwRtBJGrkrzbR9Iw493mkrYQZeQNTpja0xXgPbj7mHGSPgXlUogsPzCaCNfm700ciLJXdvD"
-
-
 
 @app.post("/checkout", status_code=status.HTTP_200_OK)
 def checkout_and_pay(
