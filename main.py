@@ -183,3 +183,36 @@ def add_to_cart(
         db.commit()
         db.refresh(new_cart_item)
         return new_cart_item
+    
+
+
+@app.get("/cart", response_model=schemas.CartOverviewResponse)
+def get_user_cart(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+
+    cart_items = db.query(CartItem).filter(CartItem.user_id == current_user.id).all()
+    
+    
+    total = sum(item.quantity * item.product.price for item in cart_items)
+    
+    return {
+        "items": cart_items,
+        "total_price": round(total, 2)
+    }
+
+
+@app.delete("/cart", status_code=status.HTTP_200_OK)
+def clear_user_cart(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+
+    db.query(CartItem).filter(CartItem.user_id == current_user.id).delete(synchronize_session=False)
+    db.commit()
+    
+    return {
+        "status": "Success",
+        "message": "Your shopping cart has been successfully emptied."
+    }

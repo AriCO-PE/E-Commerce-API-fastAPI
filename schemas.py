@@ -52,3 +52,13 @@ class CartItemResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+        from typing import List
+
+
+class CartOverviewResponse(BaseModel):
+    items: List[CartItemResponse]
+    total_price: float
+
+    class Config:
+        from_attributes = True
