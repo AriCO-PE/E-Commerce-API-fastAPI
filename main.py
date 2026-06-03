@@ -6,15 +6,16 @@ from models import Base, User, Product, CartItem
 import schemas
 import auth
 import stripe
-
+import os
+from dotenv import load_dotenv
+from google import genai  
 
 from dependencies import get_current_user, check_admin_role
 
 
-# Load environment variables from the .env file
 load_dotenv()
 
-# Securely fetch keys from the environment
+
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
 ai_client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
@@ -272,4 +273,59 @@ def checkout_and_pay(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Stripe Gateway Error: {str(e)}"
+        )
+    
+
+@app.post("/ai/recommend")
+def get_ai_product_recommendations(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+
+    cart_items = db.query(CartItem).filter(CartItem.user_id == current_user.id).all()
+    
+    all_products = db.query(Product).all()
+    
+    if not all_products:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="The product catalog is empty. AI cannot make recommendations yet."
+        )
+        
+
+    cart_context = ", ".join([f"{item.product.name} (Qty: {item.quantity})" for item in cart_items]) if cart_items else "Empty"
+    catalog_context = "\n".join([f"- ID {p.id}: {p.name} (${p.price}) - {p.description}" for p in all_products])
+    
+   
+    prompt = f"""
+    You are an expert sales assistant for a modern premium E-Commerce store.
+    
+    The current customer's profile is:
+    - Email: {current_user.email}
+    - Current items in their shopping cart: [{cart_context}]
+    
+    Here is our complete store catalog:
+    {catalog_context}
+    
+    Based on what is in their cart, analyze their taste and recommend ONE or TWO specific products from the catalog that they haven't added yet. Explain concisely why these items complement their current interest. 
+    Keep your response professional, engaging, and friendly in English or Spanish depending on what matches naturally.
+    """
+    
+    try:
+       
+        response = ai_client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=prompt,
+        )
+        
+        return {
+            "status": "Success",
+            "recommended_by": "Gemini AI Core Engine",
+            "analysis": response.text
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Google GenAI Engine Error: {str(e)}"
         )
